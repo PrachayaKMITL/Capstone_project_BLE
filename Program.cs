@@ -193,6 +193,53 @@ namespace Bluetest_3
             }
         }
 
+        private static async Task ReadFromCharacteristic(GattCharacteristic characteristic)
+        {
+            try
+            {
+                Console.WriteLine("Reading from characteristic...");
+
+                GattReadResult readResult = await characteristic.ReadValueAsync();
+                if (readResult.Status == GattCommunicationStatus.Success)
+                {
+                    byte[] receivedBytes = readResult.Value.ToArray();
+
+                    if (receivedBytes.Length == 0)
+                    {
+                        Console.WriteLine("Error: No data received from BLE.");
+                        return;
+                    }
+
+                    int[] parsedData = new int[receivedBytes.Length / 4];
+
+                    for (int i = 0; i < parsedData.Length; i++)
+                    {
+                        parsedData[i] = BitConverter.ToInt32(receivedBytes, i * 4);
+                    }
+
+                    // Convert to space-separated string instead of comma-separated
+                    string dataToSend = string.Join(" ", parsedData);
+
+                    Console.WriteLine("Received Data: " + dataToSend);
+
+                    // Send the modified data to Unity
+                    SendDataToUnity(dataToSend);
+                }
+                else
+                {
+                    Console.WriteLine("Failed to read data from characteristic.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading from characteristic: {ex.Message}");
+            }
+
+            // Keep reading periodically
+            await Task.Delay(500);
+            await ReadFromCharacteristic(characteristic);
+        }
+
         private static void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
             try
@@ -205,7 +252,6 @@ namespace Bluetest_3
                     return;
                 }
 
-                // Convert received bytes to an integer array (assuming 4-byte integers)
                 int[] parsedData = new int[receivedBytes.Length / 4];
 
                 for (int i = 0; i < parsedData.Length; i++)
@@ -213,9 +259,13 @@ namespace Bluetest_3
                     parsedData[i] = BitConverter.ToInt32(receivedBytes, i * 4);
                 }
 
-                Console.WriteLine($"Received Updated Data: {string.Join(",", parsedData)}");
+                // Convert to space-separated string
+                string dataToSend = string.Join(" ", parsedData);
 
-                SendDataToUnity(parsedData);
+                Console.WriteLine("Updated Data: " + dataToSend);
+
+                // Send to Unity
+                SendDataToUnity(dataToSend);
             }
             catch (Exception ex)
             {
@@ -223,19 +273,20 @@ namespace Bluetest_3
             }
         }
 
-        private static void SendDataToUnity(int[] data)
+        private static void SendDataToUnity(string data)
         {
             try
             {
-                byte[] sendData = data.SelectMany(BitConverter.GetBytes).ToArray();
+                byte[] sendData = System.Text.Encoding.UTF8.GetBytes(data);
                 udpClient.Send(sendData, sendData.Length);
-                Console.WriteLine($"Sent to Unity via UDP: {string.Join(",", data)}");
+                Console.WriteLine($"Sent to Unity via UDP: {data}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error sending data via UDP: {ex.Message}");
             }
         }
+
 
         private static void DeviceWatcher_Stopped(DeviceWatcher sender, object args) => Console.WriteLine("Device watcher stopped.");
         private static void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object args) => Console.WriteLine("Device enumeration completed.");
