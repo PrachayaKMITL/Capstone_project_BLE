@@ -17,7 +17,7 @@ namespace Bluetest_3
         static DeviceWatcher deviceWatcher = null;
         static BluetoothLEDevice bluetoothLeDevice = null;
         static bool isDeviceFound = false;
-        static string targetMacAddress = "cc:db:a7:8f:cc:be"; // Update this with the correct MAC address
+        static string targetMacAddress = "cc:8d:a2:ec:c7:05"; // Update this with the correct MAC address
         static UdpClient udpClient;
         static string udpTargetAddress = "127.0.0.1"; // IP address of Unity machine
         static int udpPort = 12345; // Unity's listening UDP port
@@ -81,7 +81,7 @@ namespace Bluetest_3
                 : string.Empty;
 
             Console.WriteLine($"Device found: {args.Name} ({deviceMacAddress})");
-            if ((args.Name == "ESP32-Server" || deviceMacAddress == targetMacAddress) && device == null)
+            if ((args.Name == "ESP32-ImageServer" || deviceMacAddress == targetMacAddress) && device == null)
             {
                 device = args;
                 isDeviceFound = true;
@@ -252,17 +252,10 @@ namespace Bluetest_3
                     return;
                 }
 
-                int[] parsedData = new int[receivedBytes.Length / 4];
+                // Convert to space-separated string of 8-bit values (0-255)
+                string dataToSend = string.Join(" ", receivedBytes);
 
-                for (int i = 0; i < parsedData.Length; i++)
-                {
-                    parsedData[i] = BitConverter.ToInt32(receivedBytes, i * 4);
-                }
-
-                // Convert to space-separated string
-                string dataToSend = string.Join(" ", parsedData);
-
-                Console.WriteLine("Updated Data: " + dataToSend);
+                Console.WriteLine("Updated Data (8-bit): " + dataToSend);
 
                 // Send to Unity
                 SendDataToUnity(dataToSend);
